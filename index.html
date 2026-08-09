@@ -2,7 +2,7 @@
 <html lang="kn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=1200, initial-scale=1.0">
 <title>ಶಾಲಾ ಲೆಕ್ಕ ಪುಸ್ತಕ — School Fund Passbook</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Kannada:wght@500;700&family=Noto+Sans+Kannada:wght@400;600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
@@ -173,6 +173,8 @@
     cursor:pointer; font-family:'Noto Sans Kannada',sans-serif;
   }
   .tbtn:hover{ background:var(--paper-dark); }
+  .tbtn.save{ color:var(--credit); border-color:var(--credit); }
+  .tbtn.save:hover{ background:var(--credit-bg); }
   .tbtn.reset{ color:var(--debit); border-color:var(--debit-bg); }
   .tbtn.reset:hover{ background:var(--debit-bg); }
   .tbtn.export{ color:var(--credit); }
@@ -256,6 +258,29 @@
   .field input:focus, .field select:focus, button:focus-visible{
     outline:2px solid var(--ink); outline-offset:1px;
   }
+
+  .head-input-wrap {
+    display: flex;
+    gap: 4px;
+  }
+  .head-input-wrap select {
+    flex: 1;
+  }
+  .add-head-btn {
+    background: var(--gold);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 0 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .add-head-btn:hover {
+    background: #9a6f22;
+  }
+
   .type-toggle{ display:flex; gap:6px; }
   .type-toggle button{
     flex:1; padding:8px 4px; border-radius:4px; border:1px solid var(--line);
@@ -316,11 +341,33 @@
   @media print{
     body{ background:#fff; padding:0; }
     .book{ box-shadow:none; }
-    .entry-panel, .del-btn, footer.note, .toolbar{ display:none; }
+    .entry-panel, .del-btn, footer.note, .toolbar, .no-print{ display:none !important; }
+  }
+
+  .no-print{
+    text-align:center;
+    margin:15px 0;
   }
 </style>
 </head>
 <body>
+
+<div class="no-print">
+  <a href="https://bilingualmediumschools.blogspot.com/2026/04/home-page.html"
+     target="_blank"
+     style="display:inline-block;
+            background:#1565c0;
+            color:#fff;
+            text-decoration:none;
+            padding:10px 18px;
+            border-radius:8px;
+            font-weight:bold;
+            font-size:16px;">
+    <br> ರಚನೆ: ಮನೋಹರ್ ಆರ್‌ ಕೆ.ಜಿ.ಎಫ್<br>
+    🌐 School Resource Centre – Click Here to Visit
+  </a>
+</div>
+
 <div class="book">
   <div class="inner">
 
@@ -346,7 +393,7 @@
         <input type="text" id="mTaluk" placeholder="Enter taluk">
       </div>
       <div class="id-field">
-        <label for="mDistrict">ಜಿಲ್ಲೆ / District</label>
+        <label for="mDistrict">ಜಿಲ್ಲೆ / ಜಿಲ್ಲೆ / District</label>
         <input type="text" id="mDistrict" placeholder="Enter district">
       </div>
       <div class="id-field">
@@ -356,6 +403,7 @@
     </div>
 
     <div class="toolbar">
+      <button class="tbtn save" id="saveBtn" type="button">💾 Save</button>
       <button class="tbtn" id="printBtn" type="button">🖨 Print</button>
       <button class="tbtn export" id="exportBtn" type="button">⇩ Export to Excel</button>
       <button class="tbtn reset" id="resetBtn" type="button">⟲ Reset All</button>
@@ -377,7 +425,10 @@
         </div>
         <div class="field">
           <label for="fHead">ಅನುದಾನ / Grant Head</label>
-          <select id="fHead"></select>
+          <div class="head-input-wrap">
+            <select id="fHead"></select>
+            <button type="button" class="add-head-btn" id="addHeadBtn" title="ಹೊಸ ಅನುದಾನ ಸೇರಿಸಿ">+ ಹೊಸ</button>
+          </div>
         </div>
         <div class="field">
           <label>ಬಗೆ / Type</label>
@@ -416,20 +467,46 @@
 </div>
 
 <script>
-const HEADS = [
+const DEFAULT_HEADS = [
   "SA2", "Community Mobilization", "School Grant", "Libraries Elementary",
   "U-DISE PLUS", "Best SDMC Exposure Visit", "TLM", "LBA",
   "Training SDMC", "ECO CLUB"
 ];
 
+let HEADS = [...DEFAULT_HEADS];
+
 const fHead = document.getElementById('fHead');
-HEADS.forEach(h => {
-  const o = document.createElement('option');
-  o.value = h; o.textContent = h;
-  fHead.appendChild(o);
+
+function updateHeadDropdown() {
+  const currentVal = fHead.value;
+  fHead.innerHTML = '';
+  HEADS.forEach(h => {
+    const o = document.createElement('option');
+    o.value = h; o.textContent = h;
+    fHead.appendChild(o);
+  });
+  if (HEADS.includes(currentVal)) {
+    fHead.value = currentVal;
+  }
+}
+
+document.getElementById('addHeadBtn').addEventListener('click', () => {
+  const newHeadName = prompt("ಹೊಸ ಅನುದಾನದ ಹೆಸರು ನಮೂದಿಸಿ (Enter new Grant Head name):");
+  if (!newHeadName || !newHeadName.trim()) return;
+  const trimmed = newHeadName.trim();
+  if (HEADS.includes(trimmed)) {
+    alert("ಈ ಅನುದಾನವು ಈಗಾಗಲೇ ಪಟ್ಟಿಯಲ್ಲಿದೆ!");
+    fHead.value = trimmed;
+    return;
+  }
+  HEADS.push(trimmed);
+  updateHeadDropdown();
+  fHead.value = trimmed;
+  render();
+  scheduleSave();
 });
 
-const STORAGE_KEY = 'pfms-passbook-entries';
+const STORAGE_KEY = 'pfms-passbook-entries-v4';
 let entries = [];
 let meta = { school: '', taluk: '', district: '', year: '' };
 
@@ -449,23 +526,21 @@ function fmt(n){
   return sign + '₹' + Math.abs(n).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 
-// ---------- Auto-save (persists across sessions) ----------
+// ---------- Auto-save and Manual Save using localStorage ----------
 const saveDot = document.getElementById('saveDot');
 const saveText = document.getElementById('saveText');
 let saveTimer = null;
 
-async function saveEntries(){
+function saveEntries(){
   saveDot.classList.add('saving');
   saveText.textContent = 'Saving…';
   try{
-    const payload = JSON.stringify({ meta, entries });
-    const result = await window.storage.set(STORAGE_KEY, payload, false);
-    if (result){
+    const payload = JSON.stringify({ meta, entries, heads: HEADS });
+    localStorage.setItem(STORAGE_KEY, payload);
+    setTimeout(() => {
       saveDot.classList.remove('saving');
       saveText.textContent = 'Saved';
-    } else {
-      throw new Error('no result');
-    }
+    }, 200);
   } catch(err){
     saveDot.classList.remove('saving');
     saveText.textContent = 'Save failed';
@@ -479,22 +554,34 @@ function scheduleSave(){
   saveTimer = setTimeout(saveEntries, 400);
 }
 
-async function loadEntries(){
+document.getElementById('saveBtn').addEventListener('click', () => {
+  saveEntries();
+  alert('ಮಾಹಿತಿ ಯಶಸ್ವಿಯಾಗಿ ಸೇವ್ ಆಗಿದೆ! (Data Saved Successfully)');
+});
+
+function loadEntries(){
   try{
-    const result = await window.storage.get(STORAGE_KEY, false);
-    if (result && result.value){
-      const parsed = JSON.parse(result.value);
+    const val = localStorage.getItem(STORAGE_KEY);
+    if (val){
+      const parsed = JSON.parse(val);
       if (Array.isArray(parsed)){
-        entries = parsed; // backwards-compat with older saves (entries-only)
+        entries = parsed;
       } else {
         entries = parsed.entries || [];
         meta = Object.assign(meta, parsed.meta || {});
+        if (parsed.heads && Array.isArray(parsed.heads)) {
+          const merged = [...DEFAULT_HEADS];
+          parsed.heads.forEach(h => {
+            if (!merged.includes(h)) merged.push(h);
+          });
+          HEADS = merged;
+        }
       }
     }
   } catch(err){
-    // key doesn't exist yet — that's fine, start empty
     entries = [];
   }
+  updateHeadDropdown();
   document.getElementById('mSchool').value = meta.school || '';
   document.getElementById('mTaluk').value = meta.taluk || '';
   document.getElementById('mDistrict').value = meta.district || '';
@@ -563,11 +650,20 @@ document.getElementById('exportBtn').addEventListener('click', () => {
 });
 
 // ---------- Reset ----------
-document.getElementById('resetBtn').addEventListener('click', async () => {
-  if (!confirm('This will permanently delete all entries and reset every grant head to zero. Continue?')) return;
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (!confirm('This will permanently delete all entries, custom grant heads, and reset everything. Continue?')) return;
   entries = [];
+  HEADS = [...DEFAULT_HEADS];
+  meta = { school: '', taluk: '', district: '', year: '' };
+  document.getElementById('mSchool').value = '';
+  document.getElementById('mTaluk').value = '';
+  document.getElementById('mDistrict').value = '';
+  document.getElementById('mYear').value = '';
+  localStorage.removeItem(STORAGE_KEY);
+  updateHeadDropdown();
   render();
-  await saveEntries();
+  saveDot.classList.remove('saving');
+  saveText.textContent = 'Saved';
 });
 
 function render(){
@@ -593,7 +689,7 @@ function render(){
       <td class="num amt credit">${cr ? fmt(cr) : ''}</td>
       <td class="num amt debit">${dr ? fmt(dr) : ''}</td>
       <td class="num bal">${fmt(running)}</td>
-      <td><button class="del-btn" title="Remove entry" aria-label="Remove entry">×</button>
+      <td><button class="del-btn" title="Remove entry" aria-label="Remove entry">×</button></td>
     `;
     tr.querySelector('.del-btn').addEventListener('click', () => {
       const idx = entries.indexOf(e);
@@ -635,7 +731,7 @@ document.getElementById('addBtn').addEventListener('click', () => {
   const head = fHead.value;
   const amt = parseFloat(document.getElementById('fAmt').value);
 
-  if (!date || !amt || amt <= 0){
+  if (!date || isNaN(amt) || amt <= 0){
     alert('Please enter a valid date and amount.');
     return;
   }
@@ -651,68 +747,3 @@ loadEntries();
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<head>
-    <meta charset="UTF-8">
-    <!-- ಇದು ಮೊಬೈಲ್‌ನಲ್ಲಿಯೂ ಡೆಸ್ಕ್‌ಟಾಪ್ ವ್ಯೂ ಬರುವುದನ್ನು ಖಚಿತಪಡಿಸುತ್ತದೆ -->
-    <meta name="viewport" content="width=1200, initial-scale=1.0">
-    <title>ನಿಮ್ಮ ಪೇಜ್ ಶೀರ್ಷಿಕೆ</title>
-</head>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<style>
-@media print{
-  .no-print{
-    display:none !important;
-  }
-}
-</style>
-
-<div class="no-print" style="text-align:center;margin:15px 0;">
-  <a href="https://bilingualmediumschools.blogspot.com/2026/04/home-page.html"
-     target="_blank"
-     style="display:inline-block;
-            background:#1565c0;
-            color:#fff;
-            text-decoration:none;
-            padding:10px 18px;
-            border-radius:8px;
-            font-weight:bold;
-            font-size:16px;">
-<br> ರಚನೆ: ಮನೋಹರ್ ಆರ್‌ ಕೆ.ಜಿ.ಎಫ್<br>
-    🌐 School Resource Centre – Click Here to Visit
-  </a>
-</div>
