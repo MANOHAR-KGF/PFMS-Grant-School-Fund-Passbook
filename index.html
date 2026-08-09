@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="kn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ಶಾಲಾ ಲೆಕ್ಕ ಪುಸ್ತಕ — School Fund Passbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Kannada:wght@500;700&family=Noto+Sans+Kannada:wght@400;600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --paper:      #F6F1E1;
+    --paper-dark: #EDE5CE;
+    --ink:        #1B2A4A;
+    --ink-soft:   #3F4E6B;
+    --credit:     #2F6B4F;
+    --credit-bg:  #E4EFE7;
+    --debit:      #8B2E2E;
+    --debit-bg:   #F3E4E1;
+    --gold:       #B8862B;
+    --line:       #C9BFA0;
+    --shadow:     rgba(27,42,74,0.18);
+  }
+
+  * { box-sizing: border-box; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  body{
+    margin:0;
+    background:
+      repeating-linear-gradient(135deg, rgba(27,42,74,0.02) 0 2px, transparent 2px 40px),
+      var(--paper-dark);
+    font-family:'Noto Sans Kannada','Noto Sans',sans-serif;
+    color:var(--ink);
+    padding:28px 16px 60px;
+    min-height:100vh;
+  }
+
+  .book{
+    max-width:1180px;
+    margin:0 auto;
+    background:var(--paper);
+    border-radius:6px;
+    box-shadow: 0 18px 40px var(--shadow), 0 2px 0 var(--gold);
+    position:relative;
+    overflow:hidden;
+  }
+
+  /* Ledger binding holes down the left edge */
+  .book::before{
+    content:"";
+    position:absolute;
+    top:0; bottom:0; left:0;
+    width:34px;
+    background:
+      repeating-linear-gradient(to bottom,
+        transparent 0 18px,
+        rgba(27,42,74,0.16) 18px 20px,
+        transparent 20px 46px);
+    background-color: var(--paper-dark);
+    border-right:1px dashed var(--line);
+    z-index:2;
+  }
+  .book::after{
+    content:"";
+    position:absolute;
+    top:14px; bottom:14px; left:9px;
+    width:16px;
+    background-image: radial-gradient(circle at center, var(--paper-dark) 5px, transparent 5.5px);
+    background-size: 16px 32px;
+    background-repeat: repeat-y;
+    box-shadow: inset 0 0 0 1px rgba(27,42,74,0.15);
+    border-radius: 8px;
+    z-index:3;
+  }
+
+  .inner{ padding: 30px 34px 40px 58px; position:relative; z-index:1;}
+
+  /* ---------- Header / stamp ---------- */
+  header{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:20px;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:18px;
+    margin-bottom:22px;
+  }
+  .titles h1{
+    font-family:'Noto Serif Kannada', serif;
+    font-weight:700;
+    font-size:clamp(24px,3.4vw,34px);
+    margin:0 0 2px;
+    letter-spacing:0.2px;
+  }
+  .titles p{
+    margin:0;
+    font-size:13px;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:1.6px;
+  }
+
+  .stamp{
+    width:150px;height:150px;
+    border-radius:50%;
+    border:3px solid var(--gold);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;
+    transform:rotate(-8deg);
+    background:
+      radial-gradient(circle at 50% 50%, rgba(184,134,43,0.06), transparent 70%);
+    position:relative;
+    flex-shrink:0;
+  }
+  .stamp::before{
+    content:"";
+    position:absolute;inset:8px;
+    border:1px dashed var(--gold);
+    border-radius:50%;
+  }
+  .stamp .label{ font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--gold); font-weight:700;}
+  .stamp .amount{
+    font-family:'Courier Prime', monospace;
+    font-weight:700;
+    font-size:19px;
+    color:var(--ink);
+    margin:4px 0;
+    line-height:1.15;
+  }
+  .stamp .date{ font-size:9px; color:var(--ink-soft); }
+
+  /* ---------- Identification fields ---------- */
+  .id-panel{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(190px,1fr));
+    gap:14px 22px;
+    margin-bottom:22px;
+    padding:14px 16px;
+    background:var(--paper);
+    border:1px dashed var(--line);
+    border-radius:6px;
+  }
+  .id-field{ display:flex; flex-direction:column; }
+  .id-field label{
+    font-size:10px; text-transform:uppercase; letter-spacing:1.2px;
+    color:var(--gold); font-weight:700; margin-bottom:3px;
+  }
+  .id-field input{
+    border:none; border-bottom:1.5px solid var(--line);
+    background:transparent;
+    font-family:'Noto Serif Kannada', serif;
+    font-size:16px; font-weight:500;
+    color:var(--ink);
+    padding:3px 2px 5px;
+  }
+  .id-field input:focus{ outline:none; border-bottom-color:var(--ink); }
+  .id-field input::placeholder{ font-family:'Noto Sans Kannada',sans-serif; font-weight:400; font-size:13px; color:#B8AF97; }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{
+    display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px;
+    align-items:center;
+  }
+  .tbtn{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:8px 14px; border-radius:5px; border:1px solid var(--line);
+    background:#fff; color:var(--ink); font-size:12.5px; font-weight:600;
+    cursor:pointer; font-family:'Noto Sans Kannada',sans-serif;
+  }
+  .tbtn:hover{ background:var(--paper-dark); }
+  .tbtn.reset{ color:var(--debit); border-color:var(--debit-bg); }
+  .tbtn.reset:hover{ background:var(--debit-bg); }
+  .tbtn.export{ color:var(--credit); }
+  .tbtn.export:hover{ background:var(--credit-bg); }
+  .save-status{
+    margin-left:auto; font-size:11px; color:var(--ink-soft);
+    display:flex; align-items:center; gap:5px;
+  }
+  .save-dot{ width:6px;height:6px;border-radius:50%; background:var(--credit); }
+  .save-dot.saving{ background:var(--gold); }
+
+  /* ---------- Summary stub cards ---------- */
+  .stubs{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(190px,1fr));
+    gap:12px;
+    margin-bottom:28px;
+  }
+  .stub{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-left:4px solid var(--gold);
+    border-radius:3px;
+    padding:11px 13px;
+    position:relative;
+  }
+  .stub h3{
+    margin:0 0 8px;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--ink);
+    line-height:1.25;
+    min-height:32px;
+  }
+  .stub .row{ display:flex; justify-content:space-between; font-size:11.5px; color:var(--ink-soft); margin-bottom:3px;}
+  .stub .row span:last-child{ font-family:'Courier Prime',monospace; }
+  .stub .bal{
+    margin-top:8px; padding-top:7px; border-top:1px dashed var(--line);
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-weight:700;
+  }
+  .stub .bal span:last-child{ font-family:'Courier Prime',monospace; font-size:15px; }
+  .stub.neg .bal span:last-child{ color:var(--debit); }
+  .stub.pos .bal span:last-child{ color:var(--credit); }
+
+  /* ---------- Entry form ---------- */
+  .entry-panel{
+    background:var(--paper-dark);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:16px 18px;
+    margin-bottom:26px;
+  }
+  .entry-panel h2{
+    font-family:'Noto Serif Kannada',serif;
+    font-size:16px; margin:0 0 12px; font-weight:700;
+  }
+  .entry-grid{
+    display:grid;
+    grid-template-columns: 1fr 1.6fr 1.6fr 1fr 1fr auto;
+    gap:10px;
+    align-items:end;
+  }
+  @media (max-width: 900px){
+    .entry-grid{ grid-template-columns: 1fr 1fr; }
+  }
+  .field label{
+    display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:0.8px;
+    color:var(--ink-soft); margin-bottom:4px; font-weight:600;
+  }
+  .field input, .field select{
+    width:100%;
+    padding:8px 9px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    background:#fff;
+    font-family:'Noto Sans Kannada',sans-serif;
+    font-size:13.5px;
+    color:var(--ink);
+  }
+  .field input:focus, .field select:focus, button:focus-visible{
+    outline:2px solid var(--ink); outline-offset:1px;
+  }
+  .type-toggle{ display:flex; gap:6px; }
+  .type-toggle button{
+    flex:1; padding:8px 4px; border-radius:4px; border:1px solid var(--line);
+    background:#fff; font-size:12.5px; font-weight:600; cursor:pointer; color:var(--ink-soft);
+  }
+  .type-toggle button.active[data-type="credit"]{ background:var(--credit); border-color:var(--credit); color:#fff; }
+  .type-toggle button.active[data-type="debit"]{ background:var(--debit); border-color:var(--debit); color:#fff; }
+
+  .add-btn{
+    background:var(--ink); color:#fff; border:none; border-radius:4px;
+    padding:9px 18px; font-size:13.5px; font-weight:600; cursor:pointer;
+    white-space:nowrap;
+  }
+  .add-btn:hover{ background:var(--ink-soft); }
+
+  /* ---------- Ledger table ---------- */
+  .ledger-wrap{
+    border:1px solid var(--line);
+    border-radius:6px;
+    overflow:hidden;
+    overflow-x:auto;
+  }
+  table{ width:100%; border-collapse:collapse; min-width:760px; }
+  thead th{
+    background:var(--ink); color:#fff;
+    font-size:11px; text-transform:uppercase; letter-spacing:0.8px;
+    text-align:left; padding:10px 12px; font-weight:600;
+    position:sticky; top:0;
+  }
+  thead th.num, tbody td.num{ text-align:right; }
+  tbody td{
+    padding:9px 12px; font-size:13px; border-top:1px solid var(--line);
+    vertical-align:middle;
+  }
+  tbody tr:nth-child(even){ background:rgba(27,42,74,0.025); }
+  tbody tr.example{ font-style:italic; color:var(--ink-soft); }
+  td.amt{ font-family:'Courier Prime',monospace; }
+  td.amt.credit{ color:var(--credit); }
+  td.amt.debit{ color:var(--debit); }
+  td.bal{ font-family:'Courier Prime',monospace; font-weight:700; }
+  .head-pill{
+    display:inline-block; padding:2px 8px; border-radius:20px;
+    background:var(--paper-dark); border:1px solid var(--line);
+    font-size:11px; color:var(--ink-soft);
+  }
+  .del-btn{
+    background:none; border:1px solid var(--line); color:var(--ink-soft);
+    width:24px;height:24px;border-radius:50%; cursor:pointer; font-size:13px; line-height:1;
+  }
+  .del-btn:hover{ background:var(--debit-bg); border-color:var(--debit); color:var(--debit); }
+
+  .empty-row td{ text-align:center; padding:26px; color:var(--ink-soft); font-style:italic; }
+
+  footer.note{
+    margin-top:16px; font-size:11.5px; color:var(--ink-soft); text-align:center;
+  }
+
+  @media print{
+    body{ background:#fff; padding:0; }
+    .book{ box-shadow:none; }
+    .entry-panel, .del-btn, footer.note, .toolbar{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="book">
+  <div class="inner">
+
+    <header>
+      <div class="titles">
+        <h1>ಶಾಲಾ ಲೆಕ್ಕ ಪುಸ್ತಕ — School Fund Passbook</h1>
+        <p>PFMS Grant Ledger · SDMC Account</p>
+      </div>
+      <div class="stamp">
+        <span class="label">Total Balance</span>
+        <span class="amount" id="grandBalance">₹0</span>
+        <span class="date" id="asOfDate"></span>
+      </div>
+    </header>
+
+    <div class="id-panel">
+      <div class="id-field">
+        <label for="mSchool">ಶಾಲೆಯ ಹೆಸರು / School Name</label>
+        <input type="text" id="mSchool" placeholder="Enter school name">
+      </div>
+      <div class="id-field">
+        <label for="mTaluk">ತಾಲೂಕು / Taluk</label>
+        <input type="text" id="mTaluk" placeholder="Enter taluk">
+      </div>
+      <div class="id-field">
+        <label for="mDistrict">ಜಿಲ್ಲೆ / District</label>
+        <input type="text" id="mDistrict" placeholder="Enter district">
+      </div>
+      <div class="id-field">
+        <label for="mYear">ಶೈಕ್ಷಣಿಕ ವರ್ಷ / Academic Year</label>
+        <input type="text" id="mYear" placeholder="e.g. 2026-27">
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <button class="tbtn" id="printBtn" type="button">🖨 Print</button>
+      <button class="tbtn export" id="exportBtn" type="button">⇩ Export to Excel</button>
+      <button class="tbtn reset" id="resetBtn" type="button">⟲ Reset All</button>
+      <span class="save-status"><span class="save-dot" id="saveDot"></span><span id="saveText">Saved</span></span>
+    </div>
+
+    <div class="stubs" id="stubGrid"></div>
+
+    <div class="entry-panel">
+      <h2>ಹೊಸ ನಮೂದು — Add Entry</h2>
+      <div class="entry-grid">
+        <div class="field">
+          <label for="fDate">ದಿನಾಂಕ / Date</label>
+          <input type="date" id="fDate">
+        </div>
+        <div class="field">
+          <label for="fDesc">ವಿವರ / Description</label>
+          <input type="text" id="fDesc" placeholder="e.g. Chalk & duster purchase">
+        </div>
+        <div class="field">
+          <label for="fHead">ಅನುದಾನ / Grant Head</label>
+          <select id="fHead"></select>
+        </div>
+        <div class="field">
+          <label>ಬಗೆ / Type</label>
+          <div class="type-toggle">
+            <button type="button" data-type="credit" class="active">ಜಮಾ Credit</button>
+            <button type="button" data-type="debit">ಖರ್ಚು Debit</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="fAmt">ಮೊತ್ತ / Amount (₹)</label>
+          <input type="number" id="fAmt" min="0" step="0.01" placeholder="0.00">
+        </div>
+        <button class="add-btn" id="addBtn" type="button">+ Add Entry</button>
+      </div>
+    </div>
+
+    <div class="ledger-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ದಿನಾಂಕ</th>
+            <th>ವಿವರ</th>
+            <th>ಅನುದಾನ</th>
+            <th class="num">ಜಮಾ (Cr)</th>
+            <th class="num">ಖರ್ಚು (Dr)</th>
+            <th class="num">ಶಿಲ್ಕು</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ledgerBody"></tbody>
+      </table>
+    </div>
+
+    <footer class="note">Entries auto-save as you go and will still be here next time you open this page. Table is sorted by date, oldest first.</footer>
+  </div>
+</div>
+
+<script>
+const HEADS = [
+  "SA2", "Community Mobilization", "School Grant", "Libraries Elementary",
+  "U-DISE PLUS", "Best SDMC Exposure Visit", "TLM", "LBA",
+  "Training SDMC", "ECO CLUB"
+];
+
+const fHead = document.getElementById('fHead');
+HEADS.forEach(h => {
+  const o = document.createElement('option');
+  o.value = h; o.textContent = h;
+  fHead.appendChild(o);
+});
+
+const STORAGE_KEY = 'pfms-passbook-entries';
+let entries = [];
+let meta = { school: '', taluk: '', district: '', year: '' };
+
+let entryType = 'credit';
+document.querySelectorAll('.type-toggle button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.type-toggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    entryType = btn.dataset.type;
+  });
+});
+
+document.getElementById('fDate').valueAsDate = new Date();
+
+function fmt(n){
+  const sign = n < 0 ? '-' : '';
+  return sign + '₹' + Math.abs(n).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+// ---------- Auto-save (persists across sessions) ----------
+const saveDot = document.getElementById('saveDot');
+const saveText = document.getElementById('saveText');
+let saveTimer = null;
+
+async function saveEntries(){
+  saveDot.classList.add('saving');
+  saveText.textContent = 'Saving…';
+  try{
+    const payload = JSON.stringify({ meta, entries });
+    const result = await window.storage.set(STORAGE_KEY, payload, false);
+    if (result){
+      saveDot.classList.remove('saving');
+      saveText.textContent = 'Saved';
+    } else {
+      throw new Error('no result');
+    }
+  } catch(err){
+    saveDot.classList.remove('saving');
+    saveText.textContent = 'Save failed';
+    console.error('Storage error:', err);
+  }
+}
+
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  saveText.textContent = 'Unsaved changes…';
+  saveTimer = setTimeout(saveEntries, 400);
+}
+
+async function loadEntries(){
+  try{
+    const result = await window.storage.get(STORAGE_KEY, false);
+    if (result && result.value){
+      const parsed = JSON.parse(result.value);
+      if (Array.isArray(parsed)){
+        entries = parsed; // backwards-compat with older saves (entries-only)
+      } else {
+        entries = parsed.entries || [];
+        meta = Object.assign(meta, parsed.meta || {});
+      }
+    }
+  } catch(err){
+    // key doesn't exist yet — that's fine, start empty
+    entries = [];
+  }
+  document.getElementById('mSchool').value = meta.school || '';
+  document.getElementById('mTaluk').value = meta.taluk || '';
+  document.getElementById('mDistrict').value = meta.district || '';
+  document.getElementById('mYear').value = meta.year || '';
+  render();
+}
+
+['mSchool','mTaluk','mDistrict','mYear'].forEach(id => {
+  document.getElementById(id).addEventListener('input', (e) => {
+    const key = { mSchool:'school', mTaluk:'taluk', mDistrict:'district', mYear:'year' }[id];
+    meta[key] = e.target.value;
+    scheduleSave();
+  });
+});
+
+// ---------- Print ----------
+document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+// ---------- Export to Excel ----------
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+  let running = 0;
+  const ledgerRows = sorted.map(e => {
+    const cr = e.type === 'credit' ? e.amount : 0;
+    const dr = e.type === 'debit' ? e.amount : 0;
+    running += cr - dr;
+    return {
+      'Date': e.date,
+      'Description': e.desc || '',
+      'Grant Head': e.head,
+      'Credit (₹)': cr || '',
+      'Debit (₹)': dr || '',
+      'Balance (₹)': running
+    };
+  });
+
+  const summaryRows = HEADS.map(head => {
+    const rows = entries.filter(e => e.head === head);
+    const credit = rows.filter(e => e.type==='credit').reduce((s,e)=>s+e.amount,0);
+    const debit  = rows.filter(e => e.type==='debit').reduce((s,e)=>s+e.amount,0);
+    return {
+      'Grant Head': head,
+      'Total Credit (₹)': credit,
+      'Total Debit (₹)': debit,
+      'Balance (₹)': credit - debit
+    };
+  });
+
+  const infoRows = [
+    { 'Field': 'School Name', 'Value': meta.school || '' },
+    { 'Field': 'Taluk', 'Value': meta.taluk || '' },
+    { 'Field': 'District', 'Value': meta.district || '' },
+    { 'Field': 'Academic Year', 'Value': meta.year || '' },
+  ];
+
+  const wb = XLSX.utils.book_new();
+  const wsInfo = XLSX.utils.json_to_sheet(infoRows, { skipHeader: true });
+  const wsLedger = XLSX.utils.json_to_sheet(ledgerRows);
+  const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+  XLSX.utils.book_append_sheet(wb, wsInfo, 'School Info');
+  XLSX.utils.book_append_sheet(wb, wsLedger, 'Ledger');
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Grant Summary');
+  const stamp = new Date().toISOString().slice(0,10);
+  const namePart = (meta.school || 'school_fund_passbook').trim().replace(/[^a-z0-9]+/gi, '_');
+  XLSX.writeFile(wb, `${namePart}_${stamp}.xlsx`);
+});
+
+// ---------- Reset ----------
+document.getElementById('resetBtn').addEventListener('click', async () => {
+  if (!confirm('This will permanently delete all entries and reset every grant head to zero. Continue?')) return;
+  entries = [];
+  render();
+  await saveEntries();
+});
+
+function render(){
+  const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+
+  // ---- ledger rows with running balance ----
+  const body = document.getElementById('ledgerBody');
+  body.innerHTML = '';
+  let running = 0;
+  if (sorted.length === 0){
+    body.innerHTML = '<tr class="empty-row"><td colspan="7">No entries yet — add your first transaction above.</td></tr>';
+  }
+  sorted.forEach(e => {
+    const cr = e.type === 'credit' ? e.amount : 0;
+    const dr = e.type === 'debit' ? e.amount : 0;
+    running += cr - dr;
+    const tr = document.createElement('tr');
+    if (e.example) tr.classList.add('example');
+    tr.innerHTML = `
+      <td>${e.date}</td>
+      <td>${e.desc || '—'}</td>
+      <td><span class="head-pill">${e.head}</span></td>
+      <td class="num amt credit">${cr ? fmt(cr) : ''}</td>
+      <td class="num amt debit">${dr ? fmt(dr) : ''}</td>
+      <td class="num bal">${fmt(running)}</td>
+      <td><button class="del-btn" title="Remove entry" aria-label="Remove entry">×</button>
+    `;
+    tr.querySelector('.del-btn').addEventListener('click', () => {
+      const idx = entries.indexOf(e);
+      if (idx > -1) entries.splice(idx, 1);
+      render();
+      scheduleSave();
+    });
+    body.appendChild(tr);
+  });
+
+  // ---- grand stamp ----
+  document.getElementById('grandBalance').textContent = fmt(running);
+  document.getElementById('asOfDate').textContent = 'as of ' +
+    new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+
+  // ---- per-head stub cards ----
+  const grid = document.getElementById('stubGrid');
+  grid.innerHTML = '';
+  HEADS.forEach(head => {
+    const rows = entries.filter(e => e.head === head);
+    const credit = rows.filter(e => e.type==='credit').reduce((s,e)=>s+e.amount,0);
+    const debit  = rows.filter(e => e.type==='debit').reduce((s,e)=>s+e.amount,0);
+    const bal = credit - debit;
+    const div = document.createElement('div');
+    div.className = 'stub ' + (bal < 0 ? 'neg' : 'pos');
+    div.innerHTML = `
+      <h3>${head}</h3>
+      <div class="row"><span>Credit</span><span>${fmt(credit)}</span></div>
+      <div class="row"><span>Debit</span><span>${fmt(debit)}</span></div>
+      <div class="bal"><span>Balance</span><span>${fmt(bal)}</span></div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+document.getElementById('addBtn').addEventListener('click', () => {
+  const date = document.getElementById('fDate').value;
+  const desc = document.getElementById('fDesc').value.trim();
+  const head = fHead.value;
+  const amt = parseFloat(document.getElementById('fAmt').value);
+
+  if (!date || !amt || amt <= 0){
+    alert('Please enter a valid date and amount.');
+    return;
+  }
+
+  entries.push({ date, desc, head, type: entryType, amount: amt });
+  document.getElementById('fDesc').value = '';
+  document.getElementById('fAmt').value = '';
+  render();
+  scheduleSave();
+});
+
+loadEntries();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<head>
+    <meta charset="UTF-8">
+    <!-- ಇದು ಮೊಬೈಲ್‌ನಲ್ಲಿಯೂ ಡೆಸ್ಕ್‌ಟಾಪ್ ವ್ಯೂ ಬರುವುದನ್ನು ಖಚಿತಪಡಿಸುತ್ತದೆ -->
+    <meta name="viewport" content="width=1200, initial-scale=1.0">
+    <title>ನಿಮ್ಮ ಪೇಜ್ ಶೀರ್ಷಿಕೆ</title>
+</head>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style>
+@media print{
+  .no-print{
+    display:none !important;
+  }
+}
+</style>
+
+<div class="no-print" style="text-align:center;margin:15px 0;">
+  <a href="https://bilingualmediumschools.blogspot.com/2026/04/home-page.html"
+     target="_blank"
+     style="display:inline-block;
+            background:#1565c0;
+            color:#fff;
+            text-decoration:none;
+            padding:10px 18px;
+            border-radius:8px;
+            font-weight:bold;
+            font-size:16px;">
+<br> ರಚನೆ: ಮನೋಹರ್ ಆರ್‌ ಕೆ.ಜಿ.ಎಫ್<br>
+    🌐 School Resource Centre – Click Here to Visit
+  </a>
+</div>
